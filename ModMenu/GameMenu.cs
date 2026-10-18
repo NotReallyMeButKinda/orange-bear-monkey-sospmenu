@@ -24,7 +24,7 @@ namespace SocialSpaceModMenu
             public Action Run;
         }
 
-        private const int MaxRows = 16;
+        private const int VisibleRows = 7; // per page; the game's tabs are only ~400x200 units
         private static readonly Color Panel = new(0.09f, 0.09f, 0.1f, 0.97f);
         private static readonly Color RowIdle = new(1f, 1f, 1f, 0.04f);
         private static readonly Color Accent = new(0.85f, 0.47f, 0.34f, 1f);
@@ -38,7 +38,11 @@ namespace SocialSpaceModMenu
         private TextMeshProUGUI _toggleText, _headerText;
         private readonly List<(GameObject Go, TextMeshProUGUI Text)> _rowViews = new();
         private List<Row> _current = new();
-        private readonly string[] _shown = new string[MaxRows];
+        private readonly string[] _shown = new string[VisibleRows];
+        private GameObject _nav;
+        private TextMeshProUGUI _pageText;
+        private int _page;
+        private string _pageKey;
         private string _shownHeader;
         private bool _open, _logged, _wasShown;
         private TMP_InputField _input;
@@ -100,7 +104,7 @@ namespace SocialSpaceModMenu
             _input = null;
             if (_toggle != null)
                 Object.Destroy(_toggle);
-            _section = _overlay = _toggle = null;
+            _section = _overlay = _toggle = _nav = null;
             _rowViews.Clear();
         }
 
@@ -124,16 +128,20 @@ namespace SocialSpaceModMenu
             var sectionRt = _section.GetComponent(Il2CppType.Of<RectTransform>()).Cast<RectTransform>();
             Rect r = sectionRt.rect;
             float w = Mathf.Max(r.width, 100f), h = Mathf.Max(r.height, 100f);
+            // the tab's own text, else any text in the game's menu (the Settings tab has none of its own)
             var font = _section.GetComponentInChildren(Il2CppType.Of<TMP_Text>(), true)?.TryCast<TMP_Text>();
+            if (font == null || font.font == null)
+                font = _section.transform.root.GetComponentInChildren(Il2CppType.Of<TMP_Text>(), true)?.TryCast<TMP_Text>();
             if (!_logged)
             {
                 _logged = true;
                 Melon<ModMenu>.Logger.Msg($"Game menu: {_tab} section '{_section.name}' {w:0}x{h:0}, font {(font != null && font.font != null ? font.font.name : "none")}");
             }
 
-            float rowH = h / (MaxRows + 3.5f);
+            // header, VisibleRows rows, then the page buttons
+            float rowH = h / (VisibleRows + 2.7f);
             _rowH = rowH;
-            float fontSize = rowH * 0.5f;
+            float fontSize = rowH * 0.55f;
 
             _overlay = Ui("SocialSpaceModMenu.GameMenu." + _tab, _section.transform);
             var ort = Rt(_overlay);
@@ -144,16 +152,16 @@ namespace SocialSpaceModMenu
             bg.color = Panel; // also blocks clicks from reaching the tab underneath
 
             _headerText = Text(_overlay.transform, font, fontSize * 1.15f, new Vector2(0.04f, 1f), new Vector2(0.75f, 1f),
-                new Vector2(0f, -rowH * 1.6f), new Vector2(0f, -rowH * 0.3f));
-            for (int i = 0; i < MaxRows; i++)
+                new Vector2(0f, -rowH * 1.3f), new Vector2(0f, -rowH * 0.1f));
+            for (int i = 0; i < VisibleRows; i++)
             {
                 int index = i;
                 var row = Ui("Row" + i, _overlay.transform);
                 var rrt = Rt(row);
                 rrt.anchorMin = new Vector2(0.03f, 1f);
                 rrt.anchorMax = new Vector2(0.97f, 1f);
-                rrt.offsetMin = new Vector2(0f, -rowH * (2.0f + i + 0.92f));
-                rrt.offsetMax = new Vector2(0f, -rowH * (2.0f + i));
+                rrt.offsetMin = new Vector2(0f, -rowH * (1.4f + i + 0.9f));
+                rrt.offsetMax = new Vector2(0f, -rowH * (1.4f + i));
                 var img = row.AddComponent(Il2CppType.Of<Image>()).Cast<Image>();
                 img.color = RowIdle;
                 var button = row.AddComponent(Il2CppType.Of<Button>()).Cast<Button>();
@@ -165,14 +173,27 @@ namespace SocialSpaceModMenu
                 var text = Text(row.transform, font, fontSize, new Vector2(0.02f, 0f), new Vector2(0.98f, 1f), Vector2.zero, Vector2.zero);
                 _rowViews.Add((row, text));
             }
+
+            // page buttons along the bottom
+            _nav = Ui("Pages", _overlay.transform);
+            var nrt = Rt(_nav);
+            nrt.anchorMin = new Vector2(0.03f, 1f);
+            nrt.anchorMax = new Vector2(0.97f, 1f);
+            nrt.offsetMin = new Vector2(0f, -rowH * (1.4f + VisibleRows + 0.95f));
+            nrt.offsetMax = new Vector2(0f, -rowH * (1.4f + VisibleRows + 0.05f));
+            NavButton(_nav.transform, font, fontSize, "<", 0f, 0.3f, () => Turn(-1));
+            NavButton(_nav.transform, font, fontSize, ">", 0.7f, 1f, () => Turn(1));
+            _pageText = Text(_nav.transform, font, fontSize * 0.85f, new Vector2(0.3f, 0f), new Vector2(0.7f, 1f), Vector2.zero, Vector2.zero);
+            _pageText.alignment = TextAlignmentOptions.Center;
+            _pageText.color = new Color(0.71f, 0.69f, 0.66f);
             _overlay.SetActive(false);
 
             _toggle = Ui("SocialSpaceModMenu.GameMenuButton." + _tab, _section.transform);
             var trt = Rt(_toggle);
             trt.anchorMin = trt.anchorMax = new Vector2(1f, 1f);
             trt.pivot = new Vector2(1f, 1f);
-            trt.sizeDelta = new Vector2(w * 0.22f, rowH * 1.2f);
-            trt.anchoredPosition = new Vector2(-w * 0.02f, -rowH * 0.3f);
+            trt.sizeDelta = new Vector2(w * 0.2f, rowH * 1.1f);
+            trt.anchoredPosition = new Vector2(-w * 0.02f, -rowH * 0.15f);
             var timg = _toggle.AddComponent(Il2CppType.Of<Image>()).Cast<Image>();
             timg.color = Accent;
             var tb = _toggle.AddComponent(Il2CppType.Of<Button>()).Cast<Button>();
@@ -180,6 +201,33 @@ namespace SocialSpaceModMenu
             _toggleText = Text(_toggle.transform, font, fontSize, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             _toggleText.alignment = TextAlignmentOptions.Center;
             _toggleText.text = _buttonText;
+        }
+
+        private void NavButton(Transform parent, TMP_Text font, float size, string label, float x0, float x1, Action run)
+        {
+            var go = Ui("Page" + label, parent);
+            var rt = Rt(go);
+            rt.anchorMin = new Vector2(x0, 0f);
+            rt.anchorMax = new Vector2(x1, 1f);
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            go.AddComponent(Il2CppType.Of<Image>()).Cast<Image>().color = new Color(1f, 1f, 1f, 0.08f);
+            var b = go.AddComponent(Il2CppType.Of<Button>()).Cast<Button>();
+            var colours = b.colors;
+            colours.pressedColor = Accent;
+            b.colors = colours;
+            b.onClick.AddListener(DelegateSupport.ConvertDelegate<UnityAction>(new Action(run)));
+            var t = Text(go.transform, font, size * 1.2f, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            t.alignment = TextAlignmentOptions.Center;
+            t.text = label;
+        }
+
+        private int PageCount => Mathf.Max(1, (_current.Count + VisibleRows - 1) / VisibleRows);
+
+        private void Turn(int by)
+        {
+            _page = Mathf.Clamp(_page + by, 0, PageCount - 1);
+            Array.Clear(_shown, 0, _shown.Length);
+            Refresh();
         }
 
         /// <summary>Shows a text box in place of the header, focused so the game's VR keyboard comes up.</summary>
@@ -257,8 +305,8 @@ namespace SocialSpaceModMenu
             rt.anchorMin = new Vector2(0.03f, 1f);
             rt.anchorMax = new Vector2(0.75f, 1f);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.offsetMin = new Vector2(0f, -_rowH * 1.75f);
-            rt.offsetMax = new Vector2(0f, -_rowH * 0.25f);
+            rt.offsetMin = new Vector2(0f, -_rowH * 1.35f);
+            rt.offsetMax = new Vector2(0f, -_rowH * 0.05f);
             return field;
         }
 
@@ -296,13 +344,28 @@ namespace SocialSpaceModMenu
                 _shownHeader = header;
                 _headerText.text = header;
             }
+            // back to the first page when the menu moves to another page (the header's first line changes)
+            string key = header == null ? "" : header.Split('\n')[0];
+            if (key != _pageKey)
+            {
+                _pageKey = key;
+                _page = 0;
+                Array.Clear(_shown, 0, _shown.Length);
+            }
+            _page = Mathf.Clamp(_page, 0, PageCount - 1);
+            int first = _page * VisibleRows;
+            bool paged = PageCount > 1;
+            if (_nav.activeSelf != paged)
+                _nav.SetActive(paged);
+            if (paged)
+                _pageText.text = $"page {_page + 1} / {PageCount}";
             for (int i = 0; i < _rowViews.Count; i++)
             {
-                bool has = i < _current.Count;
+                bool has = first + i < _current.Count;
                 var (go, text) = _rowViews[i];
                 if (go.activeSelf != has)
                     go.SetActive(has);
-                string label = has ? _current[i].Label : null;
+                string label = has ? _current[first + i].Label : null;
                 if (has && label != _shown[i])
                     text.text = label;
                 _shown[i] = label;
@@ -313,6 +376,7 @@ namespace SocialSpaceModMenu
         {
             try
             {
+                index += _page * VisibleRows;
                 if (index < _current.Count)
                     _current[index].Run?.Invoke();
                 Refresh();
