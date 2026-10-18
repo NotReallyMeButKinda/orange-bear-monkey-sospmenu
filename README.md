@@ -74,6 +74,12 @@ somewhere else, pass `-p:GameDir="path\to\Social Space"`.
 - Custom tap sounds: `<game>/UserData/GorillaLocomotion/Sounds/*.wav`
 - Settings: `<game>/UserData/MelonPreferences.cfg` (category `SocialSpaceModMenu`)
 
+## Installing
+
+* Install melonloader
+* put the main dll into mods
+* put the updater into plugins
+
 ## Third-party code
 
 `GorillaLocomotion.cs` is adapted from
