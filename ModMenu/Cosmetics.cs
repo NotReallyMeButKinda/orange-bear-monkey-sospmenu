@@ -256,7 +256,7 @@ namespace SocialSpaceModMenu
                 if (look.Head >= 0)
                     TintHead(head, Colours[look.Head].Colour, worn.Shirt);
                 if (look.Hands >= 0)
-                    TintHands(PlayerColliders.FindHands(acc, mine || loco == null ? null : loco.Origin), Colours[look.Hands].Colour, worn.Shirt);
+                    TintHands(HandVisuals(acc), Colours[look.Hands].Colour, worn.Shirt);
                 _worn[acc.Pointer] = worn;
             }
             foreach (var key in new List<IntPtr>(_worn.Keys))
@@ -467,8 +467,44 @@ namespace SocialSpaceModMenu
             }
         }
 
-        // the hands: hand / skin meshes under each hand, never whatever the hand is holding (the Creatool)
-        private void TintHands(Transform[] hands, Color colour, List<Renderer> into)
+        // The visible hands aren't inside the avatar: they're SmoothControllerFollow objects chasing a target
+        // (your controllers, or another player's synced hand points). A follower is this player's hand when
+        // its target sits on one of their tracked hand / controller points. Matched by position, because
+        // Gorilla locomotion swaps the local followers' targets for stand-ins.
+        private static List<Transform> HandVisuals(AccountClientData acc)
+        {
+            const float match = 0.15f;
+            var points = new List<Transform>();
+            var tracker = acc.GetComponentInChildren(Il2CppType.Of<RemoteLocalTracker>(), true)?.TryCast<RemoteLocalTracker>();
+            if (tracker != null)
+            {
+                foreach (var go in new[] { tracker.LeftHand, tracker.RightHand, tracker.LocalLeftController, tracker.LocalRightController })
+                    if (go != null)
+                        points.Add(go.transform);
+            }
+            var result = new List<Transform>();
+            foreach (var c in acc.GetComponentsInChildren(Il2CppType.Of<SmoothControllerFollow>(), true))
+                result.Add(c.transform);
+            foreach (var obj in Object.FindObjectsByType(Il2CppType.Of<SmoothControllerFollow>(), FindObjectsSortMode.None))
+            {
+                var f = obj.TryCast<SmoothControllerFollow>();
+                if (f == null || f.target == null || result.Exists(t => t == f.transform))
+                    continue;
+                Vector3 at = f.target.position;
+                foreach (var p in points)
+                {
+                    if (p != null && (p.position - at).sqrMagnitude < match * match)
+                    {
+                        result.Add(f.transform);
+                        break;
+                    }
+                }
+            }
+            return result;
+        }
+
+        // the hands: the hand visuals' meshes, never whatever the hand is holding (the Creatool)
+        private void TintHands(List<Transform> hands, Color colour, List<Renderer> into)
         {
             var names = new List<string>();
             int tinted = 0;
@@ -481,9 +517,9 @@ namespace SocialSpaceModMenu
                     var r = c.TryCast<Renderer>();
                     if (r == null || r.gameObject.name.StartsWith("SocialSpaceModMenu") || r.GetComponentInParent(Il2CppType.Of<Creatool>(), true) != null)
                         continue;
+                    if (r.TryCast<LineRenderer>() != null || r.TryCast<ParticleSystemRenderer>() != null)
+                        continue; // pointer rays and effects
                     names.Add(r.gameObject.name + "/" + (r.sharedMaterial != null ? r.sharedMaterial.name : ""));
-                    if (!NamedLike(r, "hand", "skin", "glove", "palm", "finger", "fist"))
-                        continue;
                     Tint(r, colour, into);
                     tinted++;
                 }
