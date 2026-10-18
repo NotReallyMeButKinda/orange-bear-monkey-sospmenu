@@ -350,7 +350,7 @@ namespace SocialSpaceModMenu
             (Page.Movement, "Movement", "gorilla, boost, web, ride, noclip, desktop"),
             (Page.Visuals, "Visuals", "big space optimizations, lighting, post, FPS"),
             (Page.Players, "Players", "collision, nameplates, hats, shirts, visors"),
-            (Page.World, "World", "mirrors, camera mirror"),
+            (Page.World, "World", "mirrors (show your hat)"),
             (Page.Building, "Building", "pictures, auto-recolor, sky, highlights"),
             (Page.Spaces, "Spaces", "save, load, clear"),
             (Page.Settings, "Settings", "notifications, auto update, Discord status"),
@@ -770,30 +770,6 @@ namespace SocialSpaceModMenu
                     {
                         LoggerInstance.Error($"Mirror spawn failed: {e}");
                         Flash("Mirror failed (see log)");
-                    }
-                }
-            });
-            _items.Add(new MenuItem
-            {
-                Label = Mirrors.CameraCrashedLastTime && _mirrors.Count == 0
-                    ? "<color=#F87171>Camera mirror crashed the game last time</color>  <size=70%><color=#B5B0A8>click to allow it again</color></size>"
-                    : $"Spawn camera mirror ({Mirrors.Sizes[Mathf.Clamp(_mirrorSize.Value, 0, Mirrors.Sizes.Length - 1)].Name}, shows hats)",
-                Run = () =>
-                {
-                    if (Mirrors.CameraCrashedLastTime && _mirrors.Count == 0)
-                    {
-                        Mirrors.ClearCrashMarker();
-                        Flash("Camera mirror allowed again; spawn it to try");
-                        return;
-                    }
-                    try
-                    {
-                        Flash(_mirrors.SpawnCamera());
-                    }
-                    catch (Exception e)
-                    {
-                        LoggerInstance.Error($"Camera mirror failed: {e}");
-                        Flash("Camera mirror failed (see log)");
                     }
                 }
             });
