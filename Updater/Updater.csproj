@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>SocialSpaceModMenu.Updater</AssemblyName>
+    <RootNamespace>SocialSpaceModMenu.Updater</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <!-- the game install; override with -p:GameDir=... -->
+    <GameDir Condition="'$(GameDir)' == ''">C:\program files (x86)\steam\steamapps\common\Social Space</GameDir>
+    <MLDir>$(GameDir)\MelonLoader</MLDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="$(MLDir)\net6\MelonLoader.dll" Private="false" />
+  </ItemGroup>
+
+  <!-- the mod also embeds this DLL and installs it itself; this just keeps a dev install current -->
+  <Target Name="CopyToPlugins" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)\Plugins" ContinueOnError="WarnAndContinue" />
+  </Target>
+
+</Project>
