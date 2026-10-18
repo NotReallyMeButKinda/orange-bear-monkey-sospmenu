@@ -10,12 +10,12 @@ using Object = UnityEngine.Object;
 namespace SocialSpaceModMenu
 {
     /// <summary>
-    /// Hats, shirt colours and arm bands that other mod users can see. Your choice travels as one extra key ("ssmm_cosmetic") in your
+    /// Hats, shirt colours and wristbands that other mod users can see. Your choice travels as one extra key ("ssmm_cosmetic") in your
     /// player data, which the game already relays to everyone in the instance; players without the mod
     /// ignore the unknown key. When it's sent, your current player data goes along unchanged, so nothing
     /// the game set is lost. Each mod user builds the hats locally from primitives on the wearer's head,
     /// tints the wearer's body renderers for the shirt (a property block, so the game's materials are
-    /// untouched), and puts a ring around each of the wearer's wrists for the arm bands.
+    /// untouched), and puts a ring around each of the wearer's wrists for the wristbands.
     /// </summary>
     internal sealed class Cosmetics
     {
@@ -437,17 +437,19 @@ namespace SocialSpaceModMenu
 
         private static readonly int EmissionId = Shader.PropertyToID("_EmissionColor");
 
-        // an arm band: a flat ring just behind the hand, around the wrist
+        // a wristband: a snug, slim ring right where the hand meets the wrist
         private GameObject Band(Transform hand, Color colour)
         {
-            var root = new GameObject("SocialSpaceModMenu.ArmBand");
+            const int segments = 16;
+            const float radius = 0.034f;
+            var root = new GameObject("SocialSpaceModMenu.Wristband");
             root.transform.SetParent(hand, false);
-            root.transform.localPosition = new Vector3(0f, 0f, -0.07f);
-            for (int i = 0; i < 12; i++)
+            root.transform.localPosition = new Vector3(0f, 0f, -0.025f);
+            for (int i = 0; i < segments; i++)
             {
-                float a = i * Mathf.PI * 2f / 12f;
-                Part(root, PrimitiveType.Cube, new Vector3(Mathf.Sin(a) * 0.042f, Mathf.Cos(a) * 0.042f, 0f),
-                    new Vector3(0f, 0f, -i * 30f), new Vector3(0.024f, 0.012f, 0.03f), colour);
+                float a = i * Mathf.PI * 2f / segments;
+                Part(root, PrimitiveType.Cube, new Vector3(Mathf.Sin(a) * radius, Mathf.Cos(a) * radius, 0f),
+                    new Vector3(0f, 0f, -i * 360f / segments), new Vector3(0.015f, 0.008f, 0.022f), colour);
             }
             return root;
         }

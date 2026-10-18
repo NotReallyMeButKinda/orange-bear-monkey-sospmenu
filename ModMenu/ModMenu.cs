@@ -750,7 +750,7 @@ namespace SocialSpaceModMenu
             });
             _items.Add(new MenuItem
             {
-                Label = "Arm bands (mod users see them): " + Cosmetics.ColourName(_bands.Value - 1),
+                Label = "Wristbands (mod users see them): " + Cosmetics.ColourName(_bands.Value - 1),
                 Run = () => CyclePref(_bands, Cosmetics.Colours.Length + 1)
             });
         }

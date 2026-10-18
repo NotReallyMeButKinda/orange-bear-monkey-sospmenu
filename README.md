@@ -30,7 +30,7 @@ A MelonLoader mod for Social Space (Unity 6, IL2CPP) with an in-headset menu.
 - Teleport to 0, 0, 0
 - Player scale (0.25x to 5x): your view, reach and walking speed scale together; everyone sees your tracked height, and mod users also see your avatar resized
 - Big space optimizations (Visuals): far objects stop drawing and mid-distance ones stop casting shadows, automatically once a space has over 300 objects; local only
-- Shirt material (any of the Creatool's materials), shirt colors, visor colors and arm bands, seen by other mod users like the hats
+- Shirt material (any of the Creatool's materials), shirt colors, visor colors and wristbands, seen by other mod users like the hats
 - Discord Rich Presence ("In <space name>, with 3 others" / "In the menu" + play time); toggle in Settings
 - Web swinging is networked: other mod users see your ropes and hear the fire/release sounds
 - Desktop mode (auto when no headset): WASD move, Shift sprint, Space jump, right mouse or Tab to look, Esc releases the cursor
