@@ -8,7 +8,7 @@ A MelonLoader mod for Social Space (Unity 6, IL2CPP) with an in-headset menu.
 - Player list with distances, FPS, position, nameplate toggle
 - Save the current space to a file and load its items into another space
 - Gorilla-style arm locomotion with hand-tap sounds and vibration, at a lower player height; your visible hands stop at surfaces instead of clipping through
-- Web swinging (trigger to fire, grip to reel)
+- Web swinging (trigger to fire, grip to reel), with a crosshair on whatever the line would stick to
 - Player and hand collision against other players
 - Grip to grab
 - Speed/jump boost
@@ -29,6 +29,7 @@ A MelonLoader mod for Social Space (Unity 6, IL2CPP) with an in-headset menu.
 - Clear all objects in a space (networked delete, asks for a second click)
 - Teleport to 0, 0, 0
 - Player scale (0.25x to 5x): your view, reach and walking speed scale together; everyone sees your tracked height, and mod users also see your avatar resized
+- Post processing extras: exposure, film grain, chromatic aberration, dreamy bloom, and cinematic / sunset / pastel / noir color grades
 - Big space optimizations (Visuals): far objects stop drawing and mid-distance ones stop casting shadows, automatically once a space has over 300 objects; local only
 - Shirt material (any of the Creatool's materials), shirt colors, visor, hand and head colors, seen by other mod users like the hats
 - Discord Rich Presence ("In <space name>, with 3 others" / "In the menu" + play time); toggle in Settings

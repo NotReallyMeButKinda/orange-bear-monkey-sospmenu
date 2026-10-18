@@ -256,8 +256,22 @@ namespace SocialSpaceModMenu
                     yield return null;
                 }
             }
+            // a networked delete only asks; objects go when the server confirms, and each one plays the
+            // delete effect as it goes unless the space still counts as loading, so keep it flagged until
+            // they're all gone (or give up after a while: refused ones stay)
+            float until = Time.unscaledTime + 10f;
+            int left;
+            do
+            {
+                yield return null;
+                left = targets.Count(t => t != null);
+                if (left > 0)
+                    Status = $"Clearing... {targets.Count - left}/{targets.Count} gone";
+            } while (left > 0 && Time.unscaledTime < until);
             yield return null;
             HideEffects(sm, wasLoading);
+            failed += left;
+            done -= Math.Min(done, left);
             Status = failed == 0 ? $"Cleared {done} objects" : $"Cleared {done} objects, {failed} refused";
             Melon<ModMenu>.Logger.Msg(Status);
             Busy = false;

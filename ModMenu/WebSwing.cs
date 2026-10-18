@@ -26,6 +26,7 @@ namespace SocialSpaceModMenu
         public float ReelPull = 10f;      // extra acceleration toward the anchor while reeling
         public float MinRopeLength = 0.75f;
         public float Boost = 1f;          // shares the menu's speed/jump boost
+        private const int CrosshairPoints = 24;
 
         public bool Active { get; private set; }
 
@@ -40,6 +41,7 @@ namespace SocialSpaceModMenu
             public Vector3 AnchorWorld;
             public float Length;
             public LineRenderer Line;
+            public LineRenderer Crosshair;
         }
 
         private readonly Hand _left = new() { Node = XRNode.LeftHand };
@@ -78,6 +80,8 @@ namespace SocialSpaceModMenu
             {
                 Detach(_left);
                 Detach(_right);
+                HideCrosshair(_left);
+                HideCrosshair(_right);
             }
         }
 
@@ -105,6 +109,7 @@ namespace SocialSpaceModMenu
                     !dev.TryGetFeatureValue(UnityEngine.XR.CommonUsages.deviceRotation, out Quaternion localRot))
                 {
                     Detach(hand);
+                    HideCrosshair(hand);
                     continue;
                 }
                 dev.TryGetFeatureValue(UnityEngine.XR.CommonUsages.trigger, out float trigger);
@@ -123,7 +128,11 @@ namespace SocialSpaceModMenu
                 hand.TriggerWasDown = triggerDown;
 
                 if (!hand.Attached)
+                {
+                    UpdateCrosshair(hand, loco, handPos, handRot * Vector3.forward);
                     continue;
+                }
+                HideCrosshair(hand);
                 if (hand.AnchorTransform != null)
                     hand.AnchorWorld = hand.AnchorTransform.TransformPoint(hand.AnchorLocal);
                 else if (hand.HadTransform)
@@ -168,10 +177,8 @@ namespace SocialSpaceModMenu
 
         private void TryAttach(Hand hand, SnapLocomotion loco, Vector3 origin, Vector3 dir, XRInputDevice dev)
         {
-            if (!Cast(loco, origin, dir, 0f, out RaycastHit hit) && !Cast(loco, origin, dir, AimRadius, out hit))
+            if (!Aim(loco, origin, dir, out RaycastHit hit))
                 return;
-            if (hit.distance < MinRange)
-                return; // something within reach: let the game grab it instead
 
             hand.Attached = true;
             hand.AnchorTransform = hit.collider != null ? hit.collider.transform : null;
@@ -199,6 +206,10 @@ namespace SocialSpaceModMenu
                 PublishIfChanged(true);
             }
         }
+
+        // where a line fired now would stick; nothing within MinRange (that's left to the game's grab)
+        private bool Aim(SnapLocomotion loco, Vector3 origin, Vector3 dir, out RaycastHit hit) =>
+            (Cast(loco, origin, dir, 0f, out hit) || Cast(loco, origin, dir, AimRadius, out hit)) && hit.distance >= MinRange;
 
         // Raycast (radius 0) or sphere cast via a zero-length capsule (Physics.SphereCast is stripped).
         private bool Cast(SnapLocomotion loco, Vector3 origin, Vector3 dir, float radius, out RaycastHit best)
@@ -236,6 +247,49 @@ namespace SocialSpaceModMenu
             hand.Line.enabled = true;
             hand.Line.SetPosition(0, handPos);
             hand.Line.SetPosition(1, hand.AnchorWorld);
+        }
+
+        // a ring lying on the surface the line would stick to, sized to stay readable at range
+        private void UpdateCrosshair(Hand hand, SnapLocomotion loco, Vector3 origin, Vector3 dir)
+        {
+            if (GripGrab.HandBusy(hand.Node) || !Aim(loco, origin, dir, out RaycastHit hit))
+            {
+                HideCrosshair(hand);
+                return;
+            }
+            if (hand.Crosshair == null)
+                hand.Crosshair = MakeCrosshair(hand.Node == XRNode.LeftHand ? "Left" : "Right");
+            Vector3 normal = hit.normal.sqrMagnitude > 1e-4f ? hit.normal.normalized : -dir;
+            Vector3 u = Vector3.Cross(normal, Mathf.Abs(normal.y) < 0.95f ? Vector3.up : Vector3.right).normalized;
+            Vector3 v = Vector3.Cross(normal, u);
+            Vector3 centre = hit.point + normal * 0.02f;
+            float radius = Mathf.Clamp(hit.distance * 0.012f, 0.04f, 0.5f);
+            for (int i = 0; i < CrosshairPoints; i++)
+            {
+                float a = i * Mathf.PI * 2f / CrosshairPoints;
+                hand.Crosshair.SetPosition(i, centre + (u * Mathf.Cos(a) + v * Mathf.Sin(a)) * radius);
+            }
+            float width = radius * 0.2f;
+            hand.Crosshair.startWidth = width;
+            hand.Crosshair.endWidth = width;
+            hand.Crosshair.enabled = true;
+        }
+
+        private static void HideCrosshair(Hand hand)
+        {
+            if (hand.Crosshair != null)
+                hand.Crosshair.enabled = false;
+        }
+
+        private LineRenderer MakeCrosshair(string side)
+        {
+            var line = MakeLine("Crosshair" + side);
+            line.positionCount = CrosshairPoints;
+            line.loop = true;
+            line.numCapVertices = 0;
+            line.startColor = new Color(1f, 1f, 1f, 0.85f);
+            line.endColor = new Color(1f, 1f, 1f, 0.85f);
+            return line;
         }
 
         private LineRenderer MakeLine(string side)

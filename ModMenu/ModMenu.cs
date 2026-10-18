@@ -88,7 +88,7 @@ namespace SocialSpaceModMenu
         private string _updateNotice;
         private bool _newerNoticeShown;
         private MelonPreferences_Entry<bool> _postOn, _postVignette;
-        private MelonPreferences_Entry<int> _postBloom, _postGrade, _postTone;
+        private MelonPreferences_Entry<int> _postBloom, _postGrade, _postTone, _postExposure, _postGrain, _postChromatic;
         private MelonPreferences_Entry<int> _lightingPreset;
         private MelonPreferences_Entry<bool> _lightingShadows;
         private MelonPreferences_Entry<bool> _highlightOn;
@@ -166,6 +166,9 @@ namespace SocialSpaceModMenu
             _postGrade = _prefs.CreateEntry("PostColor", (int)PostProcessing.Grade.Vivid);
             _postTone = _prefs.CreateEntry("PostTonemapping", (int)PostProcessing.Tone.Aces);
             _postVignette = _prefs.CreateEntry("PostVignette", true);
+            _postExposure = _prefs.CreateEntry("PostExposure", PostProcessing.DefaultExposure);
+            _postGrain = _prefs.CreateEntry("PostFilmGrain", 0);
+            _postChromatic = _prefs.CreateEntry("PostChromaticAberration", 0);
             _fpsCap = _prefs.CreateEntry("FpsCap", 0);
             _perfMode = _prefs.CreateEntry("BigSpaceOptimizations", (int)Performance.Mode.Auto);
             _perfDistance = _prefs.CreateEntry("BigSpaceDrawDistance", 1);
@@ -259,6 +262,9 @@ namespace SocialSpaceModMenu
             _post.GradeSetting = (PostProcessing.Grade)Mathf.Clamp(_postGrade.Value, 0, PostProcessing.GradeCount - 1);
             _post.ToneSetting = (PostProcessing.Tone)Mathf.Clamp(_postTone.Value, 0, PostProcessing.ToneCount - 1);
             _post.VignetteOn = _postVignette.Value;
+            _post.ExposureIndex = Mathf.Clamp(_postExposure.Value, 0, PostProcessing.Exposures.Length - 1);
+            _post.Grain = (PostProcessing.Amount)Mathf.Clamp(_postGrain.Value, 0, PostProcessing.AmountCount - 1);
+            _post.Chromatic = (PostProcessing.Amount)Mathf.Clamp(_postChromatic.Value, 0, PostProcessing.AmountCount - 1);
             RunSafely("Post processing", _post.Update, () => _postOn.Value = false);
             _fps2.Index = _fpsCap.Value;
             RunSafely("FPS unlock", _fps2.Update, () => _fpsCap.Value = 0);
@@ -706,6 +712,21 @@ namespace SocialSpaceModMenu
                 {
                     Label = "   Vignette: " + (_postVignette.Value ? "on" : "off"),
                     Run = () => TogglePref(_postVignette)
+                });
+                _items.Add(new MenuItem
+                {
+                    Label = "   Exposure: " + PostProcessing.ExposureLabel(_postExposure.Value),
+                    Run = () => CyclePref(_postExposure, PostProcessing.Exposures.Length)
+                });
+                _items.Add(new MenuItem
+                {
+                    Label = "   Film grain: " + PostProcessing.Label((PostProcessing.Amount)_postGrain.Value),
+                    Run = () => CyclePref(_postGrain, PostProcessing.AmountCount)
+                });
+                _items.Add(new MenuItem
+                {
+                    Label = "   Chromatic aberration: " + PostProcessing.Label((PostProcessing.Amount)_postChromatic.Value),
+                    Run = () => CyclePref(_postChromatic, PostProcessing.AmountCount)
                 });
             }
         }

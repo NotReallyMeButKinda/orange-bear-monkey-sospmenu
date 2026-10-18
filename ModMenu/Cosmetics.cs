@@ -249,7 +249,7 @@ namespace SocialSpaceModMenu
                     SwapShirtMaterial(acc, look.ShirtMaterial, worn.Swapped);
                 if (look.Shirt >= 0)
                     TintBody(acc, Colours[look.Shirt].Colour, worn.Shirt);
-                if (!mine && !Mathf.Approximately(look.Scale, 1f))
+                if (!Mathf.Approximately(look.Scale, 1f))
                     ScaleAvatar(acc, head, look.Scale, worn.Scaled);
                 if (look.Visor >= 0)
                     TintVisor(head, Colours[look.Visor].Colour, worn.Shirt);
@@ -335,17 +335,19 @@ namespace SocialSpaceModMenu
             }
         }
 
-        // a remote mod user at another size: their head, body and hands scaled about themselves
+        // a mod user at another size (you included): their head, body and hand visuals scaled about themselves.
+        // Anything under the local rig is skipped, PlayerScale already scales that with the origin.
         private static void ScaleAvatar(AccountClientData acc, Transform head, float scale, List<(Transform, Vector3)> into)
         {
             var targets = new List<Transform> { head };
             var pbf = BodyOf(acc);
             if (pbf != null && pbf.bodyTransform != null && !pbf.bodyTransform.IsChildOf(head))
                 targets.Add(pbf.bodyTransform);
-            targets.AddRange(PlayerColliders.FindHands(acc, SnapLocomotion.Instance != null ? SnapLocomotion.Instance.Origin : null));
+            targets.AddRange(HandVisuals(acc));
+            var origin = SnapLocomotion.Instance != null ? SnapLocomotion.Instance.Origin : null;
             foreach (var t in targets)
             {
-                if (t == null)
+                if (t == null || (origin != null && t.IsChildOf(origin)))
                     continue;
                 into.Add((t, t.localScale));
                 t.localScale *= scale;
