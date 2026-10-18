@@ -95,7 +95,7 @@ namespace SocialSpaceModMenu
                     continue;
                 }
                 _cursor++;
-                float d = t.Renderer.bounds.SqrDistance(eye); // 0 inside, so floors you stand on stay
+                float d = SqrDistance(t.Renderer.bounds, eye); // 0 inside, so floors you stand on stay
                 bool hide = d > draw;
                 if (hide != t.HiddenByUs)
                 {
@@ -112,6 +112,16 @@ namespace SocialSpaceModMenu
                     t.ShadowsOffByUs = noShadow;
                 }
             }
+        }
+
+        // distance from a point to a box, squared; Bounds.SqrDistance's interop wrapper is invalid IL here
+        private static float SqrDistance(Bounds b, Vector3 p)
+        {
+            Vector3 c = b.center, e = b.extents;
+            float dx = Mathf.Max(0f, Mathf.Abs(p.x - c.x) - e.x);
+            float dy = Mathf.Max(0f, Mathf.Abs(p.y - c.y) - e.y);
+            float dz = Mathf.Max(0f, Mathf.Abs(p.z - c.z) - e.z);
+            return dx * dx + dy * dy + dz * dz;
         }
 
         private void Scan(Transform parent)
