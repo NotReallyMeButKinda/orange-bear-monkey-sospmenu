@@ -10,12 +10,12 @@ using Object = UnityEngine.Object;
 namespace SocialSpaceModMenu
 {
     /// <summary>
-    /// Hats, shirt colours and wristbands that other mod users can see. Your choice travels as one extra key ("ssmm_cosmetic") in your
+    /// Hats, shirt / visor / hand / head colours that other mod users can see. Your choice travels as one extra key ("ssmm_cosmetic") in your
     /// player data, which the game already relays to everyone in the instance; players without the mod
     /// ignore the unknown key. When it's sent, your current player data goes along unchanged, so nothing
     /// the game set is lost. Each mod user builds the hats locally from primitives on the wearer's head,
     /// tints the wearer's body renderers for the shirt (a property block, so the game's materials are
-    /// untouched), and puts a ring around each of the wearer's wrists for the wristbands.
+    /// untouched), and does the same for the visor, the hands and the head's skin.
     /// </summary>
     internal sealed class Cosmetics
     {
@@ -41,7 +41,8 @@ namespace SocialSpaceModMenu
         public Hat MyHat;
         public int MyColour;
         public int MyShirt = NoColour;
-        public int MyBands = NoColour;
+        public int MyHands = NoColour;
+        public int MyHead = NoColour;
         public int MyVisor = NoColour;
         public float MyScale = 1f;
         public string MyShirtMaterial = ""; // a Creatool material name, "" = the avatar's own
@@ -49,10 +50,10 @@ namespace SocialSpaceModMenu
         private struct Look
         {
             public Hat Hat;
-            public int HatColour, Shirt, Bands, Visor;
+            public int HatColour, Shirt, Visor, Hands, Head;
             public float Scale;
             public string ShirtMaterial;
-            public bool Any => Hat != Hat.None || Shirt >= 0 || Bands >= 0 || Visor >= 0 ||
+            public bool Any => Hat != Hat.None || Shirt >= 0 || Visor >= 0 || Hands >= 0 || Head >= 0 ||
                 !Mathf.Approximately(Scale, 1f) || !string.IsNullOrEmpty(ShirtMaterial);
         }
 
@@ -61,7 +62,6 @@ namespace SocialSpaceModMenu
             public AccountClientData Account;
             public string Value;
             public GameObject Root;
-            public List<GameObject> Bands = new();
             public List<Renderer> Shirt = new();
             public List<(Transform T, Vector3 Scale)> Scaled = new();
             public List<(Renderer R, Material M)> Swapped = new();
@@ -106,7 +106,7 @@ namespace SocialSpaceModMenu
 
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
-        private bool _loggedBody, _loggedHead;
+        private bool _loggedBody, _loggedHead, _loggedHands;
 
         private readonly Dictionary<IntPtr, Worn> _worn = new();
         private float _nextPublish, _nextScan;
@@ -127,27 +127,29 @@ namespace SocialSpaceModMenu
             index >= 0 && index < Colours.Length ? Colours[index].Name : "off";
 
         // v1 "1|hat|colour" (hats only, still read from older mod versions); v2 adds
-        // "|shirt|bands|visor|scale%|shirtMaterial" (-1 = off; older versions sent fewer fields)
-        public static string Encode(Hat hat, int colour, int shirt, int bands, int visor, float scale, string shirtMaterial)
+        // "|shirt|bands|visor|scale%|shirtMaterial|hands|head" (-1 = off; older versions sent fewer fields).
+        // "bands" (1.14-1.19 arm bands) is always sent as -1 now, so older versions draw none.
+        public static string Encode(Hat hat, int colour, int shirt, int visor, float scale, string shirtMaterial, int hands, int head)
         {
             colour = Mathf.Clamp(colour, 0, Colours.Length - 1);
             shirt = Valid(shirt);
-            bands = Valid(bands);
             visor = Valid(visor);
+            hands = Valid(hands);
+            head = Valid(head);
             int pct = Mathf.RoundToInt(Mathf.Clamp(scale, 0.1f, 10f) * 100f);
             shirtMaterial = (shirtMaterial ?? "").Replace("|", "/");
-            if (shirt < 0 && bands < 0 && visor < 0 && pct == 100 && shirtMaterial.Length == 0)
+            if (shirt < 0 && visor < 0 && hands < 0 && head < 0 && pct == 100 && shirtMaterial.Length == 0)
                 return hat == Hat.None ? "" : $"1|{(int)hat}|{colour}";
-            return $"2|{(int)hat}|{colour}|{shirt}|{bands}|{visor}|{pct}|{shirtMaterial}";
+            return $"2|{(int)hat}|{colour}|{shirt}|-1|{visor}|{pct}|{shirtMaterial}|{hands}|{head}";
         }
 
         private static int Valid(int c) => c >= 0 && c < Colours.Length ? c : NoColour;
 
-        private string MyValue() => Encode(MyHat, MyColour, MyShirt, MyBands, MyVisor, MyScale, MyShirtMaterial);
+        private string MyValue() => Encode(MyHat, MyColour, MyShirt, MyVisor, MyScale, MyShirtMaterial, MyHands, MyHead);
 
         private static bool TryDecode(string value, out Look look)
         {
-            look = new Look { Shirt = NoColour, Bands = NoColour, Visor = NoColour, Scale = 1f };
+            look = new Look { Shirt = NoColour, Visor = NoColour, Hands = NoColour, Head = NoColour, Scale = 1f };
             if (string.IsNullOrEmpty(value))
                 return false;
             var parts = value.Split('|');
@@ -160,14 +162,16 @@ namespace SocialSpaceModMenu
             {
                 if (int.TryParse(parts[3], out int s) && s >= 0 && s < Colours.Length)
                     look.Shirt = s;
-                if (int.TryParse(parts[4], out int b) && b >= 0 && b < Colours.Length)
-                    look.Bands = b;
                 if (parts.Length >= 6 && int.TryParse(parts[5], out int v) && v >= 0 && v < Colours.Length)
                     look.Visor = v;
                 if (parts.Length >= 7 && int.TryParse(parts[6], out int pct))
                     look.Scale = Mathf.Clamp(pct / 100f, 0.1f, 10f);
                 if (parts.Length >= 8)
                     look.ShirtMaterial = parts[7];
+                if (parts.Length >= 9 && int.TryParse(parts[8], out int hn) && hn >= 0 && hn < Colours.Length)
+                    look.Hands = hn;
+                if (parts.Length >= 10 && int.TryParse(parts[9], out int hd) && hd >= 0 && hd < Colours.Length)
+                    look.Head = hd;
             }
             return look.Any;
         }
@@ -207,7 +211,7 @@ namespace SocialSpaceModMenu
             ClientDataChannel.Set(Key, want);
             _lastSent = want;
             _lastSentAt = Time.unscaledTime;
-            Melon<ModMenu>.Logger.Msg($"Cosmetic sent: {(want.Length == 0 ? "none" : $"hat {Label(MyHat)} ({Colours[MyColour].Name}), shirt {ColourName(MyShirt)}, bands {ColourName(MyBands)}, visor {ColourName(MyVisor)}, scale {MyScale:0.##}, shirt material {(MyShirtMaterial.Length == 0 ? "own" : MyShirtMaterial)}")}");
+            Melon<ModMenu>.Logger.Msg($"Cosmetic sent: {(want.Length == 0 ? "none" : $"hat {Label(MyHat)} ({Colours[MyColour].Name}), shirt {ColourName(MyShirt)}, visor {ColourName(MyVisor)}, hands {ColourName(MyHands)}, head {ColourName(MyHead)}, scale {MyScale:0.##}, shirt material {(MyShirtMaterial.Length == 0 ? "own" : MyShirtMaterial)}")}");
         }
 
         private void Scan()
@@ -249,9 +253,10 @@ namespace SocialSpaceModMenu
                     ScaleAvatar(acc, head, look.Scale, worn.Scaled);
                 if (look.Visor >= 0)
                     TintVisor(head, Colours[look.Visor].Colour, worn.Shirt);
-                if (look.Bands >= 0)
-                    foreach (var hand in PlayerColliders.FindHands(acc, mine || loco == null ? null : loco.Origin))
-                        worn.Bands.Add(Band(hand, Colours[look.Bands].Colour));
+                if (look.Head >= 0)
+                    TintHead(head, Colours[look.Head].Colour, worn.Shirt);
+                if (look.Hands >= 0)
+                    TintHands(PlayerColliders.FindHands(acc, mine || loco == null ? null : loco.Origin), Colours[look.Hands].Colour, worn.Shirt);
                 _worn[acc.Pointer] = worn;
             }
             foreach (var key in new List<IntPtr>(_worn.Keys))
@@ -269,9 +274,6 @@ namespace SocialSpaceModMenu
             {
                 if (look.Hat != Hat.None && w.Root == null)
                     return false;
-                foreach (var b in w.Bands)
-                    if (b == null)
-                        return false;
             }
             return true;
         }
@@ -280,9 +282,6 @@ namespace SocialSpaceModMenu
         {
             if (w.Root != null)
                 Object.Destroy(w.Root);
-            foreach (var b in w.Bands)
-                if (b != null)
-                    Object.Destroy(b);
             foreach (var r in w.Shirt)
                 if (r != null)
                     r.SetPropertyBlock(null);
@@ -292,7 +291,6 @@ namespace SocialSpaceModMenu
             foreach (var (t, s) in w.Scaled)
                 if (t != null)
                     t.localScale = s;
-            w.Bands.Clear();
             w.Shirt.Clear();
             w.Swapped.Clear();
             w.Scaled.Clear();
@@ -437,21 +435,64 @@ namespace SocialSpaceModMenu
 
         private static readonly int EmissionId = Shader.PropertyToID("_EmissionColor");
 
-        // a wristband: a snug, slim ring right where the hand meets the wrist
-        private GameObject Band(Transform hand, Color colour)
+        private static void Tint(Renderer r, Color colour, List<Renderer> into)
         {
-            const int segments = 16;
-            const float radius = 0.034f;
-            var root = new GameObject("SocialSpaceModMenu.Wristband");
-            root.transform.SetParent(hand, false);
-            root.transform.localPosition = new Vector3(0f, 0f, -0.025f);
-            for (int i = 0; i < segments; i++)
+            var block = new MaterialPropertyBlock();
+            r.GetPropertyBlock(block);
+            block.SetColor(BaseColorId, colour);
+            block.SetColor(ColorId, colour);
+            r.SetPropertyBlock(block);
+            into.Add(r);
+        }
+
+        private static bool NamedLike(Renderer r, params string[] words)
+        {
+            string n = (r.gameObject.name + " " + (r.sharedMaterial != null ? r.sharedMaterial.name : "")).ToLowerInvariant();
+            foreach (var w in words)
+                if (n.Contains(w))
+                    return true;
+            return false;
+        }
+
+        // the head's skin: the "Head" mesh (SkinTone material), not the visor, ears, hair or hats
+        private void TintHead(Transform head, Color colour, List<Renderer> into)
+        {
+            foreach (var c in head.GetComponentsInChildren(Il2CppType.Of<Renderer>(), true))
             {
-                float a = i * Mathf.PI * 2f / segments;
-                Part(root, PrimitiveType.Cube, new Vector3(Mathf.Sin(a) * radius, Mathf.Cos(a) * radius, 0f),
-                    new Vector3(0f, 0f, -i * 360f / segments), new Vector3(0.015f, 0.008f, 0.022f), colour);
+                var r = c.TryCast<Renderer>();
+                if (r == null || r.gameObject.name.StartsWith("SocialSpaceModMenu") || NamedLike(r, "visor", "hair", "ear", "eye"))
+                    continue;
+                if (NamedLike(r, "head", "skin", "face"))
+                    Tint(r, colour, into);
             }
-            return root;
+        }
+
+        // the hands: hand / skin meshes under each hand, never whatever the hand is holding (the Creatool)
+        private void TintHands(Transform[] hands, Color colour, List<Renderer> into)
+        {
+            var names = new List<string>();
+            int tinted = 0;
+            foreach (var hand in hands)
+            {
+                if (hand == null)
+                    continue;
+                foreach (var c in hand.GetComponentsInChildren(Il2CppType.Of<Renderer>(), true))
+                {
+                    var r = c.TryCast<Renderer>();
+                    if (r == null || r.gameObject.name.StartsWith("SocialSpaceModMenu") || r.GetComponentInParent(Il2CppType.Of<Creatool>(), true) != null)
+                        continue;
+                    names.Add(r.gameObject.name + "/" + (r.sharedMaterial != null ? r.sharedMaterial.name : ""));
+                    if (!NamedLike(r, "hand", "skin", "glove", "palm", "finger", "fist"))
+                        continue;
+                    Tint(r, colour, into);
+                    tinted++;
+                }
+            }
+            if (!_loggedHands)
+            {
+                _loggedHands = true;
+                Melon<ModMenu>.Logger.Msg($"Hands: {tinted} tinted; hand renderers: {(names.Count == 0 ? "none" : string.Join(", ", names))}");
+            }
         }
 
         private static void SetLayer(GameObject go, int layer)

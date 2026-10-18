@@ -11,7 +11,7 @@ using UnityEngine.XR;
 using Object = UnityEngine.Object;
 using XRInputDevice = UnityEngine.XR.InputDevice;
 
-[assembly: MelonInfo(typeof(SocialSpaceModMenu.ModMenu), "Social Space Mod Menu", "1.19.0", "Cupri")]
+[assembly: MelonInfo(typeof(SocialSpaceModMenu.ModMenu), "Social Space Mod Menu", "1.20.0", "Cupri")]
 [assembly: MelonGame("Smooth Cube", "Social Space")]
 
 namespace SocialSpaceModMenu
@@ -84,7 +84,7 @@ namespace SocialSpaceModMenu
         private float _nextPresence;
         private MelonPreferences_Entry<int> _mirrorSize, _mirrorQuality;
         private MelonPreferences_Entry<bool> _noclipOn, _rideOn;
-        private MelonPreferences_Entry<int> _fpsCap, _hat, _hatColour, _shirt, _bands, _visor; // shirt/bands/visor: 0 = off, else colour + 1
+        private MelonPreferences_Entry<int> _fpsCap, _hat, _hatColour, _shirt, _visor, _handColour, _headColour; // 0 = off, else colour + 1
         private string _updateNotice;
         private bool _newerNoticeShown;
         private MelonPreferences_Entry<bool> _postOn, _postVignette;
@@ -175,7 +175,8 @@ namespace SocialSpaceModMenu
             _hat = _prefs.CreateEntry("CosmeticHat", 0);
             _hatColour = _prefs.CreateEntry("CosmeticColor", 0);
             _shirt = _prefs.CreateEntry("CosmeticShirt", 0);
-            _bands = _prefs.CreateEntry("CosmeticArmBands", 0);
+            _handColour = _prefs.CreateEntry("CosmeticHands", 0);
+            _headColour = _prefs.CreateEntry("CosmeticHead", 0);
             _visor = _prefs.CreateEntry("CosmeticVisor", 0);
             _shirtMaterial = _prefs.CreateEntry("CosmeticShirtMaterial", "");
             _scaleIndex = _prefs.CreateEntry("PlayerScale", PlayerScale.DefaultIndex);
@@ -268,13 +269,14 @@ namespace SocialSpaceModMenu
             _cosmetics.MyHat = (Cosmetics.Hat)Mathf.Clamp(_hat.Value, 0, Cosmetics.HatCount - 1);
             _cosmetics.MyColour = Mathf.Clamp(_hatColour.Value, 0, Cosmetics.Colours.Length - 1);
             _cosmetics.MyShirt = _shirt.Value - 1;
-            _cosmetics.MyBands = _bands.Value - 1;
+            _cosmetics.MyHands = _handColour.Value - 1;
+            _cosmetics.MyHead = _headColour.Value - 1;
             _cosmetics.MyVisor = _visor.Value - 1;
             _cosmetics.MyShirtMaterial = _shirtMaterial.Value ?? "";
             _scale.Wanted = PlayerScale.Presets[Mathf.Clamp(_scaleIndex.Value, 0, PlayerScale.Presets.Length - 1)];
             RunSafely("Player scale", _scale.Update, () => { _scaleIndex.Value = PlayerScale.DefaultIndex; _scale.Reset(); });
             _cosmetics.MyScale = _scale.Applied;
-            RunSafely("Cosmetics", _cosmetics.Update, () => { _hat.Value = 0; _shirt.Value = 0; _bands.Value = 0; _visor.Value = 0; _shirtMaterial.Value = ""; _cosmetics.ClearAll(); });
+            RunSafely("Cosmetics", _cosmetics.Update, () => { _hat.Value = 0; _shirt.Value = 0; _visor.Value = 0; _handColour.Value = 0; _headColour.Value = 0; _shirtMaterial.Value = ""; _cosmetics.ClearAll(); });
             _mirrors.SizeIndex = _mirrorSize.Value;
             _mirrors.QualityIndex = _mirrorQuality.Value;
             RunSafely("Mirrors", _mirrors.Update, _mirrors.RemoveAll);
@@ -349,7 +351,7 @@ namespace SocialSpaceModMenu
         {
             (Page.Movement, "Movement", "gorilla, boost, web, ride, noclip, desktop"),
             (Page.Visuals, "Visuals", "big space optimizations, lighting, post, FPS"),
-            (Page.Players, "Players", "collision, nameplates, hats, shirts, visors"),
+            (Page.Players, "Players", "collision, nameplates, hats, shirt / visor / hand / head colors"),
             (Page.World, "World", "mirrors (show your hat)"),
             (Page.Building, "Building", "pictures, auto-recolor, sky, highlights"),
             (Page.Spaces, "Spaces", "save, load, clear"),
@@ -750,8 +752,13 @@ namespace SocialSpaceModMenu
             });
             _items.Add(new MenuItem
             {
-                Label = "Wristbands (mod users see them): " + Cosmetics.ColourName(_bands.Value - 1),
-                Run = () => CyclePref(_bands, Cosmetics.Colours.Length + 1)
+                Label = "Hand color (mod users see it): " + Cosmetics.ColourName(_handColour.Value - 1),
+                Run = () => CyclePref(_handColour, Cosmetics.Colours.Length + 1)
+            });
+            _items.Add(new MenuItem
+            {
+                Label = "Head color (mod users see it): " + Cosmetics.ColourName(_headColour.Value - 1),
+                Run = () => CyclePref(_headColour, Cosmetics.Colours.Length + 1)
             });
         }
 
