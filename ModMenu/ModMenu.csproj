@@ -21,6 +21,7 @@
     <Reference Include="$(MLDir)\Il2CppAssemblies\UnityEngine.CoreModule.dll" Private="false" />
     <Reference Include="$(MLDir)\Il2CppAssemblies\UnityEngine.XRModule.dll" Private="false" />
     <Reference Include="$(MLDir)\Il2CppAssemblies\UnityEngine.UI.dll" Private="false" />
+    <Reference Include="$(MLDir)\Il2CppAssemblies\UnityEngine.ImageConversionModule.dll" Private="false" />
     <Reference Include="$(MLDir)\Il2CppAssemblies\UnityEngine.PhysicsModule.dll" Private="false" />
     <Reference Include="$(MLDir)\Il2CppAssemblies\UnityEngine.AudioModule.dll" Private="false" />
     <Reference Include="$(MLDir)\Il2CppAssemblies\UnityEngine.AssetBundleModule.dll" Private="false" />

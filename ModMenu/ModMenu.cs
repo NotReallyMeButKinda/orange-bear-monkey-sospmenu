@@ -11,7 +11,7 @@ using UnityEngine.XR;
 using Object = UnityEngine.Object;
 using XRInputDevice = UnityEngine.XR.InputDevice;
 
-[assembly: MelonInfo(typeof(SocialSpaceModMenu.ModMenu), "Social Space Mod Menu", "1.18.0", "Cupri")]
+[assembly: MelonInfo(typeof(SocialSpaceModMenu.ModMenu), "Social Space Mod Menu", "1.19.0", "Cupri")]
 [assembly: MelonGame("Smooth Cube", "Social Space")]
 
 namespace SocialSpaceModMenu
@@ -66,6 +66,9 @@ namespace SocialSpaceModMenu
         private GameMenu _gameSettings, _gameHome;
         private readonly Performance _perf = new();
         private readonly PlayerScale _scale = new();
+        private readonly Pictures _pictures = new();
+        private MelonPreferences_Entry<int> _pictureFrame, _pictureQuality;
+        private List<string> _pictureFiles = new();
         private MelonPreferences_Entry<int> _scaleIndex;
         private MelonPreferences_Entry<string> _shirtMaterial;
         private MelonPreferences_Entry<int> _perfMode, _perfDistance;
@@ -176,6 +179,8 @@ namespace SocialSpaceModMenu
             _visor = _prefs.CreateEntry("CosmeticVisor", 0);
             _shirtMaterial = _prefs.CreateEntry("CosmeticShirtMaterial", "");
             _scaleIndex = _prefs.CreateEntry("PlayerScale", PlayerScale.DefaultIndex);
+            _pictureFrame = _prefs.CreateEntry("PictureFrame", (int)Pictures.Frame.Wood);
+            _pictureQuality = _prefs.CreateEntry("PictureQuality", 1);
             _mirrorSize = _prefs.CreateEntry("MirrorSize", 1);
             _recolorSource = _prefs.CreateEntry("AutoRecolor", 0);
             _recolorColour = _prefs.CreateEntry("AutoRecolorColor", 0);
@@ -222,6 +227,7 @@ namespace SocialSpaceModMenu
                 RefreshPlayers();
                 ApplyNameplates();
                 _files = SpaceIO.ListFiles(MaxLoadEntries);
+                _pictureFiles = Pictures.Files();
                 // (re)attach after spawning or a space change
                 if (_gorillaMode.Value && !_gorilla.Active)
                     _gorilla.Enable();
@@ -280,6 +286,9 @@ namespace SocialSpaceModMenu
             _recolor.CustomColour = _recolorColour.Value;
             RunSafely("Auto recolor", _recolor.Update, () => _recolorSource.Value = 0);
             RunSafely("Sky", _sky.Update, () => { });
+            _pictures.NewFrame = (Pictures.Frame)Mathf.Clamp(_pictureFrame.Value, 0, Pictures.FrameCount - 1);
+            _pictures.QualityIndex = Mathf.Clamp(_pictureQuality.Value, 0, Pictures.Qualities.Length - 1);
+            RunSafely("Pictures", _pictures.Update, _pictures.ClearAll);
             RunSafely("Remote webs", _web.UpdateRemote, _web.ClearRemote);
             RunSafely("Mod networking", ClientDataChannel.Flush, () => { });
             RunSafely("Discord presence", UpdatePresence, () => _discordOn.Value = false);
@@ -342,7 +351,7 @@ namespace SocialSpaceModMenu
             (Page.Visuals, "Visuals", "big space optimizations, lighting, post, FPS"),
             (Page.Players, "Players", "collision, nameplates, hats, shirts, visors"),
             (Page.World, "World", "mirrors, camera mirror"),
-            (Page.Building, "Building", "auto-recolor, sky, Creatool highlights"),
+            (Page.Building, "Building", "pictures, auto-recolor, sky, highlights"),
             (Page.Spaces, "Spaces", "save, load, clear"),
             (Page.Settings, "Settings", "notifications, auto update, Discord status"),
         };
@@ -830,6 +839,34 @@ namespace SocialSpaceModMenu
                     Run = () => { }
                 });
             }
+            _items.Add(new MenuItem
+            {
+                Label = "Picture frame: " + Pictures.Label((Pictures.Frame)Mathf.Clamp(_pictureFrame.Value, 0, Pictures.FrameCount - 1)) +
+                    "   <size=70%><color=#B5B0A8>quality: " + Pictures.Qualities[Mathf.Clamp(_pictureQuality.Value, 0, Pictures.Qualities.Length - 1)].Name + "</color></size>",
+                Run = () => CyclePref(_pictureFrame, Pictures.FrameCount)
+            });
+            _items.Add(new MenuItem
+            {
+                Label = "   Picture quality: " + Pictures.Qualities[Mathf.Clamp(_pictureQuality.Value, 0, Pictures.Qualities.Length - 1)].Name,
+                Run = () => CyclePref(_pictureQuality, Pictures.Qualities.Length)
+            });
+            if (_pictureFiles.Count == 0)
+                _items.Add(new MenuItem
+                {
+                    Label = "<size=70%><color=#B5B0A8>   put .png / .jpg files in UserData/SocialSpaceModMenu/Pictures to hang them</color></size>",
+                    Run = () => { }
+                });
+            for (int i = 0; i < _pictureFiles.Count && i < 6; i++)
+            {
+                string path = _pictureFiles[i];
+                _items.Add(new MenuItem
+                {
+                    Label = "Hang picture: " + System.IO.Path.GetFileNameWithoutExtension(path),
+                    Run = () => Flash(_pictures.Place(path))
+                });
+            }
+            _items.Add(new MenuItem { Label = "Change frame of nearest picture", Run = () => Flash(_pictures.CycleNearestFrame()) });
+            _items.Add(new MenuItem { Label = "Remove unused picture data", Run = () => Flash(_pictures.RemoveUnused()) });
             _items.Add(new MenuItem
             {
                 Label = "Sky (synced, saved with space): " + Skybox.Presets[_sky.Current].Name,

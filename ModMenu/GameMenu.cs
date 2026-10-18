@@ -40,7 +40,7 @@ namespace SocialSpaceModMenu
         private List<Row> _current = new();
         private readonly string[] _shown = new string[MaxRows];
         private string _shownHeader;
-        private bool _open, _logged;
+        private bool _open, _logged, _wasShown;
         private TMP_InputField _input;
         private float _rowH;
         private float _nextFind;
@@ -76,7 +76,13 @@ namespace SocialSpaceModMenu
             {
                 if (_open)
                     SetOpen(false);
+                _wasShown = false;
                 return;
+            }
+            if (!_wasShown)
+            {
+                _wasShown = true;
+                SetOpen(true); // open by default each time the tab is shown; "Close" shows the game's tab
             }
             if (_overlay.transform.GetSiblingIndex() < _section.transform.childCount - 2)
             {

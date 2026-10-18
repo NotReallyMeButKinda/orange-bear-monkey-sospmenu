@@ -69,7 +69,7 @@ namespace SocialSpaceModMenu
                     continue;
                 var oi = child.GetComponent(Il2CppType.Of<ObjectInternals>());
                 var internals = oi != null ? oi.TryCast<ObjectInternals>() : null;
-                if (internals != null)
+                if (internals != null && (internals.groupId == null || !internals.groupId.StartsWith("ssmm-")))
                     Apply(tool, internals);
             }
         }

@@ -22,6 +22,7 @@ A MelonLoader mod for Social Space (Unity 6, IL2CPP) with an in-headset menu.
 - Hats other mod users can see (top hat, party hat, crown, halo, horns, cat ears; 10 colors). Sent as an extra key in your player data, which the game relays; players without the mod don't see anything
 - Spawnable mirrors (VRChat style) using the game's own mirror: 3 sizes, 3 qualities, up to 4; grip an edge to carry one. Local only
 - Recolor primitives on place: new primitives you place with the Creatool get the Creatool's current Recolor color/material, or a custom/random color (synced like a normal recolor)
+- Pictures: hang your own .png / .jpg files (from `UserData/SocialSpaceModMenu/Pictures`) with a black, white, wood, gold or silver frame. They sync to mod users and save with the space; move and scale them with the Creatool. Players without the mod see a dark panel
 - Sky presets (clear day, sunset, dusk, night, overcast, alien, void) synced to mod users in the space and saved with it, via a tiny marker object
 - Camera mirror: a screen with a live camera pointed at you, which also shows your own hat (your hat is visible in the game's mirrors too)
 - In the game's own menu: a **Mods** button in the Settings tab opens the whole mod menu, and a **Saved spaces** button in the Home tab saves, loads, renames (with the game's VR keyboard) and clears spaces
